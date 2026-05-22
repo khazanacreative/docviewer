@@ -91,9 +91,14 @@
               <i data-lucide="file-spreadsheet" class="file-icon-small"></i>
               <span id="active-filename" class="filename">Memuat database...</span>
             </div>
-            <button id="upload-new-btn" class="icon-btn-circle" title="Unggah berkas Excel/CSV baru">
-              <i data-lucide="upload"></i>
-            </button>
+            <div class="file-actions">
+              <button id="reset-db-btn" class="icon-btn-circle" title="Reset / Muat Ulang Database">
+                <i data-lucide="rotate-ccw"></i>
+              </button>
+              <button id="upload-new-btn" class="icon-btn-circle" title="Unggah berkas Excel/CSV baru">
+                <i data-lucide="upload"></i>
+              </button>
+            </div>
             <input type="file" id="sidebar-file-input" class="hidden" accept=".xlsx, .xls, .csv">
           </div>
           

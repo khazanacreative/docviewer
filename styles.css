@@ -398,6 +398,13 @@ button, input {
   text-overflow: ellipsis;
 }
 
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .icon-btn-circle {
   width: 28px;
   height: 28px;

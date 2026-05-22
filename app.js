@@ -19,6 +19,7 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const loadDemoBtn = document.getElementById('load-demo-btn');
 const uploadNewBtn = document.getElementById('upload-new-btn');
+const resetDbBtn = document.getElementById('reset-db-btn');
 const sidebarFileInput = document.getElementById('sidebar-file-input');
 const activeFilename = document.getElementById('active-filename');
 const dragOverlay = document.getElementById('drag-overlay');
@@ -51,9 +52,14 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const parsed = JSON.parse(cached);
       if (parsed && parsed.filename && parsed.documents && parsed.documents.length > 0) {
-        appData = parsed;
-        setupApplication();
-        return;
+        // Jika file di cache adalah default template, abaikan cache agar selalu memuat versi terbaru dari server
+        if (parsed.filename === 'template_excel.xlsx') {
+          localStorage.removeItem('excel_viewer_data');
+        } else {
+          appData = parsed;
+          setupApplication();
+          return;
+        }
       }
     } catch (e) {
       console.error('Gagal memuat cache:', e);
@@ -74,7 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load Default Database template_excel.xlsx
 function loadDefaultDatabase() {
-  fetch('template_excel.xlsx')
+  // Tambahkan cache buster (timestamp) agar selalu mengambil file terbaru dari server
+  const cacheBuster = `?t=${new Date().getTime()}`;
+  fetch('template_excel.xlsx' + cacheBuster)
     .then(response => {
       if (!response.ok) throw new Error('File database default tidak ditemukan');
       return response.arrayBuffer();
@@ -103,6 +111,16 @@ if (uploadNewBtn && sidebarFileInput) {
     if (e.target.files.length > 0) {
       handleFile(e.target.files[0]);
     }
+  });
+}
+
+// Sidebar Reset/Reload Button Trigger
+if (resetDbBtn) {
+  resetDbBtn.addEventListener('click', () => {
+    localStorage.removeItem('excel_viewer_data');
+    sessionStorage.removeItem('excel_viewer_reset');
+    showToast('Memuat ulang database default...');
+    loadDefaultDatabase();
   });
 }
 
@@ -251,8 +269,12 @@ function processExcelBuffer(buffer, filename, isQuiet = false) {
     appData.filename = filename;
     appData.documents = docs;
     
-    // Cache to localstorage
-    localStorage.setItem('excel_viewer_data', JSON.stringify(appData));
+    // Simpan ke localstorage hanya jika ini bukan database default
+    if (filename !== 'template_excel.xlsx') {
+      localStorage.setItem('excel_viewer_data', JSON.stringify(appData));
+    } else {
+      localStorage.removeItem('excel_viewer_data');
+    }
     
     // Hapus flag reset sesi karena file baru berhasil dimuat
     sessionStorage.removeItem('excel_viewer_reset');
