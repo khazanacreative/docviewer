@@ -22,8 +22,8 @@
 </head>
 <body>
 
-  <!-- Landing Upload State: Tampil sebelum file diunggah -->
-  <div id="landing-container" class="landing-container">
+  <!-- Landing Upload State: Tampil sebelum file diunggah (Disembunyikan secara default) -->
+  <div id="landing-container" class="landing-container hidden">
     <div class="landing-card">
       <div class="logo-area">
         <div class="logo-icon">
@@ -76,8 +76,8 @@
     </div>
   </div>
 
-  <!-- App Main Layout: Tampil setelah file berhasil diunggah -->
-  <div id="app-container" class="app-container hidden">
+  <!-- App Main Layout: Tampil langsung secara default -->
+  <div id="app-container" class="app-container">
     
     <!-- Wrapper Grid untuk Desktop & Slider Mobile -->
     <div id="layout-wrapper" class="layout-wrapper">
@@ -88,12 +88,13 @@
         <div class="sidebar-header">
           <div class="file-info-bar">
             <div class="file-details">
-              <i data-lucide="file-text" class="file-icon-small"></i>
-              <span id="active-filename" class="filename">document.xlsx</span>
+              <i data-lucide="file-spreadsheet" class="file-icon-small"></i>
+              <span id="active-filename" class="filename">Memuat database...</span>
             </div>
-            <button id="change-file-btn" class="icon-btn-circle" title="Unggah file baru">
-              <i data-lucide="refresh-cw"></i>
+            <button id="upload-new-btn" class="icon-btn-circle" title="Unggah berkas Excel/CSV baru">
+              <i data-lucide="upload"></i>
             </button>
+            <input type="file" id="sidebar-file-input" class="hidden" accept=".xlsx, .xls, .csv">
           </div>
           
           <!-- Kotak Pencarian Instan -->
@@ -161,6 +162,15 @@
 
       </main>
 
+    </div>
+  </div>
+
+  <!-- Drag & Drop Full-screen Overlay -->
+  <div id="drag-overlay" class="drag-overlay hidden">
+    <div class="drag-overlay-content">
+      <i data-lucide="upload-cloud" class="drag-overlay-icon animate-bounce"></i>
+      <h3>Lepaskan berkas Excel/CSV di sini</h3>
+      <p>Lepaskan berkas untuk memperbarui database dokumen</p>
     </div>
   </div>
 

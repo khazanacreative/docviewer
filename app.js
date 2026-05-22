@@ -18,8 +18,10 @@ const layoutWrapper = document.getElementById('layout-wrapper');
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const loadDemoBtn = document.getElementById('load-demo-btn');
-const changeFileBtn = document.getElementById('change-file-btn');
+const uploadNewBtn = document.getElementById('upload-new-btn');
+const sidebarFileInput = document.getElementById('sidebar-file-input');
 const activeFilename = document.getElementById('active-filename');
+const dragOverlay = document.getElementById('drag-overlay');
 
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
@@ -91,26 +93,62 @@ function loadDefaultDatabase() {
    FILE UPLOAD & DRAG/DROP EVENTS
    ========================================================================== */
 
-// Drag over/enter
-['dragenter', 'dragover'].forEach(eventName => {
-  dropZone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.add('drag-over');
-  }, false);
+// Sidebar Upload Button Trigger
+if (uploadNewBtn && sidebarFileInput) {
+  uploadNewBtn.addEventListener('click', () => {
+    sidebarFileInput.click();
+  });
+  
+  sidebarFileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+}
+
+// Landing Page Upload Trigger (Just in case the landing screen is shown)
+if (fileInput) {
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+}
+
+// Full-screen Drag & Drop Handling
+let dragCounter = 0;
+
+window.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter++;
+  if (dragOverlay) {
+    dragOverlay.classList.remove('hidden');
+  }
 });
 
-// Drag leave/drop
-['dragleave', 'drop'].forEach(eventName => {
-  dropZone.addEventListener(eventName, (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropZone.classList.remove('drag-over');
-  }, false);
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 });
 
-// Handle dropped files
-dropZone.addEventListener('drop', (e) => {
+window.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter--;
+  if (dragCounter === 0 && dragOverlay) {
+    dragOverlay.classList.add('hidden');
+  }
+});
+
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter = 0;
+  if (dragOverlay) {
+    dragOverlay.classList.add('hidden');
+  }
+  
   const dt = e.dataTransfer;
   const files = dt.files;
   if (files.length > 0) {
@@ -118,63 +156,29 @@ dropZone.addEventListener('drop', (e) => {
   }
 });
 
-// Click to select file
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files.length > 0) {
-    handleFile(e.target.files[0]);
-  }
-});
-
 // Load Demo File
-loadDemoBtn.addEventListener('click', () => {
-  loadDemoBtn.disabled = true;
-  loadDemoBtn.innerHTML = '<i data-lucide="loader-2" class="btn-icon animate-spin"></i> Memuat berkas demo...';
-  lucide.createIcons();
-  
-  fetch('demo.csv')
-    .then(response => {
-      if (!response.ok) throw new Error('File demo tidak ditemukan');
-      return response.arrayBuffer();
-    })
-    .then(buffer => {
-      processExcelBuffer(buffer, 'demo.csv');
-    })
-    .catch(error => {
-      showToast('Gagal memuat file demo: ' + error.message, true);
-      loadDemoBtn.disabled = false;
-      loadDemoBtn.innerHTML = '<i data-lucide="play" class="btn-icon"></i> Coba dengan File Demo';
-      lucide.createIcons();
-    });
-});
-
-// Reset application to load new file
-changeFileBtn.addEventListener('click', () => {
-  // Tandai sesi bahwa user mereset file secara manual agar tidak terkena loop auto-load default
-  sessionStorage.setItem('excel_viewer_reset', 'true');
-  
-  // Reset state
-  localStorage.removeItem('excel_viewer_data');
-  appData = { filename: '', documents: [] };
-  filteredDocuments = [];
-  activeIndex = -1;
-  
-  // Reset UI
-  searchInput.value = '';
-  clearSearchBtn.classList.add('hidden');
-  documentList.innerHTML = '';
-  noSearchResults.classList.add('hidden');
-  
-  contentHeader.classList.add('hidden');
-  contentBodyWrapper.classList.add('hidden');
-  emptyState.classList.remove('hidden');
-  layoutWrapper.classList.remove('show-detail');
-  
-  appContainer.classList.add('hidden');
-  landingContainer.classList.remove('hidden');
-  
-  // Re-init lucide for landing page
-  lucide.createIcons();
-});
+if (loadDemoBtn) {
+  loadDemoBtn.addEventListener('click', () => {
+    loadDemoBtn.disabled = true;
+    loadDemoBtn.innerHTML = '<i data-lucide="loader-2" class="btn-icon animate-spin"></i> Memuat berkas demo...';
+    lucide.createIcons();
+    
+    fetch('demo.csv')
+      .then(response => {
+        if (!response.ok) throw new Error('File demo tidak ditemukan');
+        return response.arrayBuffer();
+      })
+      .then(buffer => {
+        processExcelBuffer(buffer, 'demo.csv');
+      })
+      .catch(error => {
+        showToast('Gagal memuat file demo: ' + error.message, true);
+        loadDemoBtn.disabled = false;
+        loadDemoBtn.innerHTML = '<i data-lucide="play" class="btn-icon"></i> Coba dengan File Demo';
+        lucide.createIcons();
+      });
+  });
+}
 
 /* ==========================================================================
    EXCEL PARSING WITH SHEETJS
@@ -348,6 +352,11 @@ function selectDocument(originalIdx) {
   
   // Render text with WhatsApp formatting
   contentBody.innerHTML = formatWhatsAppText(doc.konten);
+  
+  // Trigger fade-in animation
+  contentBody.classList.remove('fade-in');
+  void contentBody.offsetWidth; // force reflow
+  contentBody.classList.add('fade-in');
   
   // Hide empty state and show reading area
   emptyState.classList.add('hidden');

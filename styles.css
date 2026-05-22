@@ -47,7 +47,7 @@
 }
 
 html, body {
-  height: 100%;
+  height: 100dvh;
   font-family: var(--font-ui);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
@@ -332,7 +332,7 @@ button, input {
    APP CONTAINER LAYOUT (DESKTOP)
    ========================================================================== */
 .app-container {
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   position: relative;
@@ -805,6 +805,8 @@ button, input {
     height: 100%;
     transform: translateX(0);
     transition: transform var(--transition-normal);
+    will-change: transform;
+    backface-visibility: hidden;
   }
   
   /* Slide detail view into view */
@@ -884,3 +886,86 @@ button, input {
     justify-content: center;
   }
 }
+
+/* ==========================================================================
+   DRAG OVERLAY MODAL & TRANSITIONS
+   ========================================================================== */
+.drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
+  background: rgba(15, 23, 42, 0.6); /* Slate 900 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity var(--transition-normal);
+}
+
+.drag-overlay.hidden {
+  display: none !important;
+  opacity: 0;
+}
+
+.drag-overlay-content {
+  background: var(--bg-primary);
+  border: 2px dashed var(--accent);
+  padding: 40px 60px;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  max-width: 90%;
+  animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.drag-overlay-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.drag-overlay h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.drag-overlay p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Content Body Animation */
+.content-body.fade-in {
+  animation: bodyFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bodyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
