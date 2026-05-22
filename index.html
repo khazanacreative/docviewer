@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Aplikasi Katalog Penampil Dokumen Excel dan CSV mandiri, cepat, dan responsif. Dioptimalkan untuk membaca teks panjang hasil salinan WhatsApp.">
+  <title>Excel Document Viewer - Antigravity</title>
+  
+  <!-- Google Fonts - Outfit untuk UI, Inter untuk teks konten -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Utama -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- SheetJS untuk membaca file Excel/CSV di client-side -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- Lucide Icons untuk ikon yang premium -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <!-- Landing Upload State: Tampil sebelum file diunggah -->
+  <div id="landing-container" class="landing-container">
+    <div class="landing-card">
+      <div class="logo-area">
+        <div class="logo-icon">
+          <i data-lucide="file-spreadsheet"></i>
+        </div>
+        <h1>Excel Viewer</h1>
+        <p class="tagline">Penampil Dokumen Teks Panjang & WhatsApp Copy-Paste</p>
+      </div>
+
+      <!-- Area Dropzone -->
+      <div id="drop-zone" class="drop-zone">
+        <input type="file" id="file-input" class="file-input" accept=".xlsx, .xls, .csv">
+        <div class="drop-zone-content">
+          <i data-lucide="upload-cloud" class="upload-icon"></i>
+          <h3>Tarik & Lepas file Excel di sini</h3>
+          <p>atau klik untuk menelusuri folder (.xlsx, .xls, .csv)</p>
+          <div class="format-info">
+            <span>Struktur kolom: A (Judul), B (Keterangan), C (Konten)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider">
+        <span>atau</span>
+      </div>
+
+      <!-- Tombol Demo untuk wow-factor langsung -->
+      <button id="load-demo-btn" class="btn btn-secondary">
+        <i data-lucide="play" class="btn-icon"></i>
+        Coba dengan File Demo
+      </button>
+
+      <div class="features-grid">
+        <div class="feature-item">
+          <i data-lucide="zap"></i>
+          <h4>Instan & Lokal</h4>
+          <p>Proses pembacaan 100% di browser Anda secara lokal tanpa server.</p>
+        </div>
+        <div class="feature-item">
+          <i data-lucide="align-left"></i>
+          <h4>Format WhatsApp Utuh</h4>
+          <p>Menjaga kerapian paragraf, baris baru, spasi, dan emoji pesan WA.</p>
+        </div>
+        <div class="feature-item">
+          <i data-lucide="search"></i>
+          <h4>Pencarian Cepat</h4>
+          <p>Temukan dokumen berdasarkan judul atau keterangan secara real-time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Main Layout: Tampil setelah file berhasil diunggah -->
+  <div id="app-container" class="app-container hidden">
+    
+    <!-- Wrapper Grid untuk Desktop & Slider Mobile -->
+    <div id="layout-wrapper" class="layout-wrapper">
+      
+      <!-- Panel Kiri: Sidebar Menu (30% lebar layar pada Desktop) -->
+      <aside class="sidebar">
+        <!-- Sidebar Header: Info File & Tombol Upload Baru -->
+        <div class="sidebar-header">
+          <div class="file-info-bar">
+            <div class="file-details">
+              <i data-lucide="file-text" class="file-icon-small"></i>
+              <span id="active-filename" class="filename">document.xlsx</span>
+            </div>
+            <button id="change-file-btn" class="icon-btn-circle" title="Unggah file baru">
+              <i data-lucide="refresh-cw"></i>
+            </button>
+          </div>
+          
+          <!-- Kotak Pencarian Instan -->
+          <div class="search-box">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="search-input" placeholder="Cari judul atau deskripsi..." autocomplete="off">
+            <button id="clear-search-btn" class="clear-search-btn hidden">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Daftar Dokumen (Scrollable) -->
+        <nav class="sidebar-content">
+          <div id="document-list" class="document-list">
+            <!-- Item daftar akan di-render di sini secara dinamis -->
+          </div>
+          <div id="no-search-results" class="no-results hidden">
+            <i data-lucide="search-code"></i>
+            <p>Tidak ada dokumen yang cocok</p>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Panel Kanan: Konten Utama (70% lebar layar pada Desktop) -->
+      <main class="content-panel">
+        
+        <!-- Header Panel: Tampil saat dokumen aktif terpilih -->
+        <header id="content-header" class="content-header hidden">
+          <div class="header-left">
+            <button id="back-btn" class="back-btn" title="Kembali ke Daftar">
+              <i data-lucide="arrow-left"></i>
+              <span>Kembali</span>
+            </button>
+            <div class="title-meta-group">
+              <h2 id="doc-title" class="doc-title">Judul Dokumen</h2>
+              <p id="doc-meta" class="doc-meta">Deskripsi / Keterangan tambahan</p>
+            </div>
+          </div>
+          <div class="header-right">
+            <button id="copy-btn" class="btn btn-primary btn-sm">
+              <i data-lucide="copy" class="btn-icon"></i>
+              <span id="copy-btn-text">Salin Teks</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Area Baca Utama (White-space: pre-wrap) -->
+        <article id="content-body-wrapper" class="content-body-wrapper hidden">
+          <div class="reading-container">
+            <pre id="content-body" class="content-body"></pre>
+          </div>
+        </article>
+
+        <!-- Empty State Panel: Tampil ketika belum ada dokumen yang diklik -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-content">
+            <div class="pulse-icon">
+              <i data-lucide="book-open"></i>
+            </div>
+            <h3>Pilih Dokumen untuk Membaca</h3>
+            <p>Silakan klik salah satu judul dokumen pada daftar di sebelah kiri untuk menampilkan isi kontennya secara lengkap di sini.</p>
+          </div>
+        </div>
+
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden">
+    <i data-lucide="check-circle" class="toast-icon"></i>
+    <span id="toast-message">Teks berhasil disalin!</span>
+  </div>
+
+  <!-- Script Aplikasi -->
+  <script src="app.js"></script>
+</body>
+</html>

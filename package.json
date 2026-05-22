@@ -1,0 +1,17 @@
+{
+  "name": "excel-document-viewer",
+  "version": "1.0.0",
+  "description": "Lightweight, responsive local client-side Excel document viewer optimized for reading WhatsApp texts",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
