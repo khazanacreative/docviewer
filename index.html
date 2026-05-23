@@ -22,8 +22,8 @@
 </head>
 <body>
 
-  <!-- Landing Upload State: Tampil sebelum file diunggah (Disembunyikan secara default) -->
-  <div id="landing-container" class="landing-container hidden">
+  <!-- Landing Upload State: Tampil sebelum file diunggah -->
+  <div id="landing-container" class="landing-container">
     <div class="landing-card">
       <div class="logo-area">
         <div class="logo-icon">
@@ -56,6 +56,16 @@
         Coba dengan File Demo
       </button>
 
+      <!-- Berkas Tersimpan -->
+      <div id="saved-files-section" class="saved-files-section hidden">
+        <div class="divider">
+          <span>Berkas Tersimpan</span>
+        </div>
+        <div id="saved-files-list" class="saved-files-list">
+          <!-- Item berkas tersimpan di-render di sini secara dinamis -->
+        </div>
+      </div>
+
       <div class="features-grid">
         <div class="feature-item">
           <i data-lucide="zap"></i>
@@ -76,31 +86,25 @@
     </div>
   </div>
 
-  <!-- App Main Layout: Tampil langsung secara default -->
-  <div id="app-container" class="app-container">
+  <!-- App Main Layout: Tampil setelah file berhasil diunggah -->
+  <div id="app-container" class="app-container hidden">
     
     <!-- Wrapper Grid untuk Desktop & Slider Mobile -->
     <div id="layout-wrapper" class="layout-wrapper">
       
       <!-- Panel Kiri: Sidebar Menu (30% lebar layar pada Desktop) -->
       <aside class="sidebar">
-        <!-- Sidebar Header: Info File & Tombol Upload Baru -->
-        <div class="sidebar-header">
-          <div class="file-info-bar">
-            <div class="file-details">
-              <i data-lucide="file-spreadsheet" class="file-icon-small"></i>
-              <span id="active-filename" class="filename">Memuat database...</span>
-            </div>
-            <div class="file-actions">
-              <button id="reset-db-btn" class="icon-btn-circle" title="Reset / Muat Ulang Database">
-                <i data-lucide="rotate-ccw"></i>
-              </button>
-              <button id="upload-new-btn" class="icon-btn-circle" title="Unggah berkas Excel/CSV baru">
-                <i data-lucide="upload"></i>
+          <!-- Sidebar Header: Info File & Tombol Upload Baru -->
+          <div class="sidebar-header">
+            <div class="file-info-bar">
+              <div class="file-details">
+                <i data-lucide="file-spreadsheet" class="file-icon-small"></i>
+                <span id="active-filename" class="filename">Memuat database...</span>
+              </div>
+              <button id="change-file-btn" class="icon-btn-circle" title="Unggah file baru">
+                <i data-lucide="refresh-cw"></i>
               </button>
             </div>
-            <input type="file" id="sidebar-file-input" class="hidden" accept=".xlsx, .xls, .csv">
-          </div>
           
           <!-- Kotak Pencarian Instan -->
           <div class="search-box">

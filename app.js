@@ -11,6 +11,83 @@ let appData = {
 let filteredDocuments = [];
 let activeIndex = -1;
 
+// IndexedDB Database Utilities
+const DB_NAME = 'ExcelViewerDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'excel_files';
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+      }
+    };
+    request.onsuccess = (e) => resolve(e.target.result);
+    request.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function saveFileToStorage(name, arrayBuffer, documents) {
+  return initDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const dataRecord = {
+        name: name,
+        data: arrayBuffer,
+        documents: documents,
+        updatedAt: Date.now()
+      };
+      const request = store.put(dataRecord);
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
+function getFileFromStorage(name) {
+  return initDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(name);
+      request.onsuccess = (e) => resolve(e.target.result);
+      request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
+function getAllFilesFromStorage() {
+  return initDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+      request.onsuccess = (e) => {
+        const files = e.target.result || [];
+        files.sort((a, b) => b.updatedAt - a.updatedAt);
+        resolve(files);
+      };
+      request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
+function deleteFileFromStorage(name) {
+  return initDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(name);
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
 // DOM Elements
 const landingContainer = document.getElementById('landing-container');
 const appContainer = document.getElementById('app-container');
@@ -18,11 +95,11 @@ const layoutWrapper = document.getElementById('layout-wrapper');
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const loadDemoBtn = document.getElementById('load-demo-btn');
-const uploadNewBtn = document.getElementById('upload-new-btn');
-const resetDbBtn = document.getElementById('reset-db-btn');
-const sidebarFileInput = document.getElementById('sidebar-file-input');
+const changeFileBtn = document.getElementById('change-file-btn');
 const activeFilename = document.getElementById('active-filename');
 const dragOverlay = document.getElementById('drag-overlay');
+const savedFilesSection = document.getElementById('saved-files-section');
+const savedFilesList = document.getElementById('saved-files-list');
 
 const searchInput = document.getElementById('search-input');
 const clearSearchBtn = document.getElementById('clear-search-btn');
@@ -43,88 +120,144 @@ const toast = document.getElementById('toast');
 const toastMessage = document.getElementById('toast-message');
 
 /* ==========================================================================
-   INITIALIZATION
+   INITIALIZATION & PERSISTENCE
    ========================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-  // Check for cached data in localStorage
-  const cached = localStorage.getItem('excel_viewer_data');
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      if (parsed && parsed.filename && parsed.documents && parsed.documents.length > 0) {
-        // Jika file di cache adalah default template, abaikan cache agar selalu memuat versi terbaru dari server
-        if (parsed.filename === 'template_excel.xlsx') {
-          localStorage.removeItem('excel_viewer_data');
-        } else {
-          appData = parsed;
-          setupApplication();
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Gagal memuat cache:', e);
-      localStorage.removeItem('excel_viewer_data');
-    }
-  }
-  
-  // Jika tidak ada cache, periksa apakah pengguna baru saja mereset aplikasi secara manual
-  const isReset = sessionStorage.getItem('excel_viewer_reset') === 'true';
-  if (!isReset) {
-    // Auto-load template_excel.xlsx sebagai database default
-    loadDefaultDatabase();
-  } else {
-    // Initialize Lucide icons on landing screen
-    lucide.createIcons();
-  }
-});
 
-// Load Default Database template_excel.xlsx
-function loadDefaultDatabase() {
-  // Tambahkan cache buster (timestamp) agar selalu mengambil file terbaru dari server
-  const cacheBuster = `?t=${new Date().getTime()}`;
-  fetch('template_excel.xlsx' + cacheBuster)
-    .then(response => {
-      if (!response.ok) throw new Error('File database default tidak ditemukan');
-      return response.arrayBuffer();
+function showLandingPage() {
+  landingContainer.classList.remove('hidden');
+  appContainer.classList.add('hidden');
+  updateSavedFilesList();
+  lucide.createIcons();
+}
+
+function updateSavedFilesList() {
+  if (!savedFilesSection || !savedFilesList) return;
+  getAllFilesFromStorage()
+    .then(files => {
+      if (files.length > 0) {
+        savedFilesSection.classList.remove('hidden');
+        savedFilesList.innerHTML = '';
+        
+        files.forEach(file => {
+          const item = document.createElement('div');
+          item.className = 'saved-file-item';
+          
+          const formattedDate = new Date(file.updatedAt).toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          item.innerHTML = `
+            <div class="saved-file-info">
+              <i data-lucide="file-spreadsheet"></i>
+              <div class="saved-file-text">
+                <span class="saved-file-name" title="${file.name}">${file.name}</span>
+                <span class="saved-file-date">Diperbarui: ${formattedDate}</span>
+              </div>
+            </div>
+            <div class="saved-file-actions">
+              <button class="saved-file-btn delete-btn" title="Hapus berkas dari browser">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          `;
+          
+          // Click to load the file
+          item.querySelector('.saved-file-info').addEventListener('click', () => {
+            appData.filename = file.name;
+            appData.documents = file.documents;
+            localStorage.setItem('active_excel_file', file.name);
+            setupApplication();
+            showToast(`Berkas "${file.name}" berhasil dimuat!`);
+          });
+          
+          // Click to delete the file
+          item.querySelector('.delete-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`Apakah Anda yakin ingin menghapus berkas "${file.name}"?`)) {
+              deleteFileFromStorage(file.name)
+                .then(() => {
+                  showToast(`Berkas "${file.name}" dihapus.`);
+                  if (localStorage.getItem('active_excel_file') === file.name) {
+                    localStorage.removeItem('active_excel_file');
+                  }
+                  updateSavedFilesList();
+                })
+                .catch(err => {
+                  showToast(`Gagal menghapus berkas: ${err.message}`, true);
+                });
+            }
+          });
+          
+          savedFilesList.appendChild(item);
+        });
+        
+        lucide.createIcons();
+      } else {
+        savedFilesSection.classList.add('hidden');
+        savedFilesList.innerHTML = '';
+      }
     })
-    .then(buffer => {
-      processExcelBuffer(buffer, 'template_excel.xlsx', true);
-    })
-    .catch(error => {
-      console.error('Gagal memuat database default:', error);
-      // Fallback: tampilkan landing page
-      lucide.createIcons();
+    .catch(err => {
+      console.error('Gagal mengambil daftar berkas:', err);
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Check for active file in localStorage
+  const activeFile = localStorage.getItem('active_excel_file');
+  if (activeFile) {
+    getFileFromStorage(activeFile)
+      .then(fileRecord => {
+        if (fileRecord && fileRecord.documents && fileRecord.documents.length > 0) {
+          appData.filename = fileRecord.name;
+          appData.documents = fileRecord.documents;
+          setupApplication();
+        } else {
+          showLandingPage();
+        }
+      })
+      .catch(e => {
+        console.error('Gagal memuat file aktif dari IndexedDB:', e);
+        showLandingPage();
+      });
+  } else {
+    showLandingPage();
+  }
+});
 
 /* ==========================================================================
    FILE UPLOAD & DRAG/DROP EVENTS
    ========================================================================== */
 
-// Sidebar Upload Button Trigger
-if (uploadNewBtn && sidebarFileInput) {
-  uploadNewBtn.addEventListener('click', () => {
-    sidebarFileInput.click();
-  });
-  
-  sidebarFileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-      handleFile(e.target.files[0]);
-    }
+// Change File Button (sidebar header)
+if (changeFileBtn) {
+  changeFileBtn.addEventListener('click', () => {
+    // Reset state
+    localStorage.removeItem('active_excel_file');
+    appData = { filename: '', documents: [] };
+    filteredDocuments = [];
+    activeIndex = -1;
+    
+    // Reset UI
+    searchInput.value = '';
+    clearSearchBtn.classList.add('hidden');
+    documentList.innerHTML = '';
+    noSearchResults.classList.add('hidden');
+    
+    contentHeader.classList.add('hidden');
+    contentBodyWrapper.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    layoutWrapper.classList.remove('show-detail');
+    
+    showLandingPage();
   });
 }
 
-// Sidebar Reset/Reload Button Trigger
-if (resetDbBtn) {
-  resetDbBtn.addEventListener('click', () => {
-    localStorage.removeItem('excel_viewer_data');
-    sessionStorage.removeItem('excel_viewer_reset');
-    showToast('Memuat ulang database default...');
-    loadDefaultDatabase();
-  });
-}
-
-// Landing Page Upload Trigger (Just in case the landing screen is shown)
+// Landing Page Upload Trigger
 if (fileInput) {
   fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
@@ -269,15 +402,15 @@ function processExcelBuffer(buffer, filename, isQuiet = false) {
     appData.filename = filename;
     appData.documents = docs;
     
-    // Simpan ke localstorage hanya jika ini bukan database default
-    if (filename !== 'template_excel.xlsx') {
-      localStorage.setItem('excel_viewer_data', JSON.stringify(appData));
-    } else {
-      localStorage.removeItem('excel_viewer_data');
-    }
-    
-    // Hapus flag reset sesi karena file baru berhasil dimuat
-    sessionStorage.removeItem('excel_viewer_reset');
+    // Save to IndexedDB
+    saveFileToStorage(filename, buffer, docs)
+      .then(() => {
+        localStorage.setItem('active_excel_file', filename);
+        updateSavedFilesList();
+      })
+      .catch(err => {
+        console.error('Gagal menyimpan berkas ke IndexedDB:', err);
+      });
     
     // Setup and show application
     setupApplication();
@@ -288,11 +421,14 @@ function processExcelBuffer(buffer, filename, isQuiet = false) {
   } catch (error) {
     showToast(error.message, true);
     // Reset demo button if active
-    loadDemoBtn.disabled = false;
-    loadDemoBtn.innerHTML = '<i data-lucide="play" class="btn-icon"></i> Coba dengan File Demo';
-    lucide.createIcons();
+    if (loadDemoBtn) {
+      loadDemoBtn.disabled = false;
+      loadDemoBtn.innerHTML = '<i data-lucide="play" class="btn-icon"></i> Coba dengan File Demo';
+      lucide.createIcons();
+    }
   }
 }
+
 
 /* ==========================================================================
    APPLICATION SCREEN SETUP & LOGIC
